@@ -56,3 +56,8 @@ i=$(( $RANDOM % 48 ))
 java -cp "bin/" mm19.runner.TestClientRunner  "${list[$i]}"
 #java -jar sam.jar  "${list[$i]}"
 
+for i in {0..10}; do
+printf '\7'
+sleep 0.1
+done
+

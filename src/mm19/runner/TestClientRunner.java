@@ -8,20 +8,18 @@ import mm19.testclient.sam9000.TestClientSam9000;
 
 public class TestClientRunner {
 
-    public static void main(String args[]) {
-        String name = "Sam The Trickster";
-        if(args.length >= 1) {
-            name = args[0];
-        }
-        TestClient tc1 = new TestClientSam9000(name);
+	public static void main(String args[]) {
+		String name = "Sam The Trickster";
+		if (args.length >= 1) {
+			name = args[0];
+		}
+		TestClient tc1 = new TestClientSam9000(name);
 
-        try {
-            tc1.connect();
+		try {
+			tc1.connect();
 
-        }
-        catch(TestClientException e) {
-            e.printStackTrace();
-        }
-    }
-
+		} catch (TestClientException e) {
+			e.printStackTrace();
+		}
+	}
 }

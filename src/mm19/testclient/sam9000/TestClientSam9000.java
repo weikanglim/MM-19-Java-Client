@@ -1,5 +1,6 @@
 package mm19.testclient.sam9000;
 
+import java.awt.Toolkit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -25,6 +26,8 @@ public class TestClientSam9000 extends TestClient {
 
 	public int DESTROYERS = 8;
 	public int PILOTS = 18 - DESTROYERS;
+	public String starting = "middle";
+	public String ij_direction = "down";
 
 	public int COLUMNS = 4;
 	public int ROWS = 5;
@@ -45,9 +48,11 @@ public class TestClientSam9000 extends TestClient {
 
 	int i_iter = 1;
 	int j_iter = 0;
-	
-	int backward_i_iter = 1;
-	int backward_j_iter = 0;
+	int ij_incre = 2;
+
+	int backward_i_iter = TestClient.BOARD_WIDTH;
+	int backward_j_iter = TestClient.BOARD_WIDTH;
+	int backward_ij_incre = 3;
 
 	int oldResources;
 	int newResources;
@@ -76,12 +81,38 @@ public class TestClientSam9000 extends TestClient {
 		JSONObject obj = new JSONObject();
 		Random rand = new Random();
 		try {
+			// variable initializations
 			obj.put("playerName", this.name);
 			oldResources = 0;
-
 			boolean main = false;
 			int destroyer = DESTROYERS, pilots = PILOTS;
 			Collection<JSONObject> ships = new ArrayList<JSONObject>();
+
+			if (starting == "top") {
+				i_iter = 1;
+				j_iter = 0;
+				backward_i_iter = TestClient.BOARD_WIDTH - 1;
+				backward_j_iter = TestClient.BOARD_WIDTH - 1;
+			} else if (starting == "middle") {
+				i_iter = 1;
+				j_iter = TestClient.BOARD_WIDTH / 2 + 1;
+				backward_i_iter = TestClient.BOARD_WIDTH - 1;
+				backward_j_iter = TestClient.BOARD_WIDTH / 2;
+			} else if (starting == "bottom") {
+				i_iter = TestClient.BOARD_WIDTH;
+				j_iter = TestClient.BOARD_WIDTH;
+				backward_i_iter = 1;
+				backward_j_iter = 1;
+			}
+
+			if (ij_direction == "down") {
+				ij_incre = 2;
+				backward_ij_incre = -4;
+			} else {
+				ij_incre = -2;
+				backward_ij_incre = 4;
+			}
+
 			for (int i = 0; i < ROWS; i++) {
 				for (int j = 0; j < COLUMNS; j++) {
 
@@ -233,10 +264,14 @@ public class TestClientSam9000 extends TestClient {
 					for (Ship _ship : sr.ships) {
 						oldResources = sr.resources;
 						if (_ship.type == ShipType.Main
-								&& _ship.contains(hr.xCoord, hr.yCoord)) {
+								&& _ship.contains(hr.xCoord, hr.yCoord)) {	
 							System.out.println("X:" + hr.xCoord + "\tY:"
 									+ hr.yCoord);
 							if (rand.nextInt(2) == 1) {
+								if (backward_j_iter < 0) {
+									backward_i_iter = TestClient.BOARD_WIDTH - 1;
+									backward_j_iter = TestClient.BOARD_WIDTH - 1;
+								}
 								Tuple<Integer, Integer> dest = findEmptySpot(
 										MAIN_LENGTH, "H", sr.ships);
 								tempAction = new ShipAction(_ship.ID, dest.x,
@@ -334,22 +369,34 @@ public class TestClientSam9000 extends TestClient {
 
 			// Burst shotting
 			if (!(availableShips.size() == 0) && !specialUsed
-					&& oldResources > 9000) {
-				int x_burst = backward_i_iter - 1;
-				int y_burst = backward_j_iter - 1;
-				
-				backward_i_iter -= 4;
+					&& sr.resources - BURST > 1000) {
+				int x_burst = backward_i_iter;
+				int y_burst = backward_j_iter;
 
-				if (backward_i_iter < 0) {
-					backward_j_iter -= 4;
-					backward_i_iter = TestClient.BOARD_WIDTH;
-					
-					if (backward_j_iter < 0) {
+				backward_i_iter += backward_ij_incre;
+
+				if (ij_direction == "down") { // up
+					if (backward_i_iter < 0) {
+						backward_j_iter += backward_ij_incre;
 						backward_i_iter = TestClient.BOARD_WIDTH;
-						backward_j_iter = TestClient.BOARD_WIDTH;
+
+						if (backward_j_iter < 0) {
+							backward_i_iter = TestClient.BOARD_WIDTH - 1;
+							backward_j_iter = TestClient.BOARD_WIDTH - 1;
+						}
+					}
+				} else if (ij_direction == "up") { // down
+					if (backward_i_iter > TestClient.BOARD_WIDTH) {
+						backward_j_iter += backward_ij_incre;
+						backward_i_iter = 1;
+
+						if (backward_j_iter > TestClient.BOARD_WIDTH) {
+							backward_i_iter = 1;
+							backward_j_iter = 1;
+						}
 					}
 				}
-				
+
 				ship = getNextDestroyer(availableShips);
 				tempAction = new ShipAction(ship.ID, x_burst, y_burst,
 						ShipAction.Action.BurstShot, 0);
@@ -361,21 +408,33 @@ public class TestClientSam9000 extends TestClient {
 			do {
 				int xCoord = i_iter;
 				int yCoord = j_iter;
-				Shot = shoot(availableShips, xCoord, yCoord, actions); // Removes
+				Shot = shoot(availableShips, xCoord, yCoord, actions, sr); // Removes
 				// available
 				// attacking
 				// ships
 
 				if (Shot) {
 					// Horizontal iteration
-					i_iter += 2;
+					System.out.println("i_iter from " + i_iter + " by " + ij_incre);
+					i_iter += ij_incre;
 
-					if (i_iter > TestClient.BOARD_WIDTH) {
-						j_iter++;
-						i_iter = (j_iter + 1) % 2;
-						if (j_iter > TestClient.BOARD_WIDTH) {
-							i_iter = 1;
-							j_iter = 0;
+					if (ij_direction == "down") {
+						if (i_iter > TestClient.BOARD_WIDTH) {
+							j_iter++;
+							i_iter = (j_iter + 1) % 2;
+							if (j_iter > TestClient.BOARD_WIDTH) {
+								i_iter = 1;
+								j_iter = 0;
+							}
+						}
+					} else if (ij_direction == "up") {
+						if (i_iter < 0) {
+							j_iter--;
+							i_iter = TestClient.BOARD_WIDTH - (j_iter + 1) % 2;
+							if (j_iter < 0) {
+								i_iter = TestClient.BOARD_WIDTH;
+								j_iter = TestClient.BOARD_WIDTH;
+							}
 						}
 					}
 				}
@@ -451,12 +510,12 @@ public class TestClientSam9000 extends TestClient {
 	 * @return
 	 */
 	private boolean shoot(ArrayList<Ship> ships, int x, int y,
-			Collection<JSONObject> actions) {
+			Collection<JSONObject> actions, ServerResponse sr) {
 		Ship ship;
 		boolean fired = false;
 		for (int i = 0; i < 2; i++) {
 			ship = getNextDestroyer(ships);
-			if (ship != null) {
+			if (ship != null && sr.resources >= FIRE) {
 				fired = true;
 				ShipAction action = ship.fire(x, y);
 				if (action != null) {
