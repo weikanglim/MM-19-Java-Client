@@ -23,7 +23,7 @@ import sun.security.x509.AVA;
  */
 public class TestClientSam9000 extends TestClient {
 
-	public int DESTROYERS = 9;
+	public int DESTROYERS = 8;
 	public int PILOTS = 18 - DESTROYERS;
 
 	public int COLUMNS = 4;
@@ -170,11 +170,11 @@ public class TestClientSam9000 extends TestClient {
 	public void processResponse(ServerResponse sr) {
 
 		hitList.clear();
-		for (HitReport hr : sr.hitReport) {
+		/*for (HitReport hr : sr.hitReport) {
 			if (hr.hit) {
 				hitList.add(new Tuple<Integer, Integer>(hr.xCoord, hr.yCoord));
 			}
-		}
+		}*/
 	}
 
 	/**
@@ -191,7 +191,7 @@ public class TestClientSam9000 extends TestClient {
 			Collection<JSONObject> actions = new ArrayList<JSONObject>();
 			ShipAction tempAction = null;
 			boolean moved = false;
-			// Chech hit for MAIN
+			// Check hit for MAIN
 			for (HitReport hr : sr.hitReport) {
 				if (hr.hit) {
 					for (Ship _ship : sr.ships) {
@@ -255,14 +255,21 @@ public class TestClientSam9000 extends TestClient {
 				}
 			}
 
+			boolean Shot = false;
+			do {
+				int xCoord = (int) (Math.random() * 99);
+				int yCoord = (int) (Math.random() * 99);
+				Shot = shoot(availableShips, xCoord, yCoord, actions);
+			} while (Shot);
+
 			for (Ship free_ship : availableShips) {
 				tempAction = null;
 				int xCoord = (int) (Math.random() * 99);
 				int yCoord = (int) (Math.random() * 99);
 
 				if (free_ship.type == ShipType.Destroyer) {
-					tempAction = new ShipAction(free_ship.ID, xCoord, yCoord,
-							ShipAction.Action.Fire, 0);
+					// tempAction = new ShipAction(free_ship.ID, xCoord,
+					// yCoord,ShipAction.Action.Fire, 0);
 				}
 
 				if (tempAction != null) {
@@ -300,24 +307,33 @@ public class TestClientSam9000 extends TestClient {
 		System.out.println("wat");
 	}
 
-	private void shoot(ArrayList<Ship> ships, int x, int y) {
+	private boolean shoot(ArrayList<Ship> ships, int x, int y,
+			Collection<JSONObject> actions) {
 		Ship ship;
+		boolean fired = false;
 		for (int i = 0; i < 2; i++) {
 			ship = getNextDestroyer(ships);
 			if (ship != null) {
-				ship = ships.get(0);
-				ship.fire(x, y);
-				ships.remove(0);
+				fired = true;
+				ShipAction action = ship.fire(x, y);
+				if (action != null) {
+					actions.add(action.toJSONObject());
+				}
+			} else {
+				break;
 			}
 		}
+		return fired;
 	}
 
 	private Ship getNextDestroyer(ArrayList<Ship> ships) {
 		Ship ship = null;
 		for (int i = 0; i < ships.size(); i++) {
-			if (ships.get(i).type == ShipType.Destroyer) {
+			if (ships.get(i).type == ShipType.Destroyer
+					|| ships.get(i).type == ShipType.Main) {
 				ship = ships.get(i);
 				ships.remove(i);
+				break;
 			}
 		}
 		return ship;
