@@ -4,4 +4,4 @@ sleep 2
 java -jar server.jar &
 sleep 2
 ./run.sh &
-java -jar ./sam.jar &
+java -jar ./samDestroyer.jar &

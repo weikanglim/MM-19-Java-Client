@@ -170,11 +170,10 @@ public class TestClientSam9000 extends TestClient {
 	public void processResponse(ServerResponse sr) {
 
 		hitList.clear();
-		/*for (HitReport hr : sr.hitReport) {
-			if (hr.hit) {
-				hitList.add(new Tuple<Integer, Integer>(hr.xCoord, hr.yCoord));
-			}
-		}*/
+		/*
+		 * for (HitReport hr : sr.hitReport) { if (hr.hit) { hitList.add(new
+		 * Tuple<Integer, Integer>(hr.xCoord, hr.yCoord)); } }
+		 */
 	}
 
 	/**
@@ -228,8 +227,16 @@ public class TestClientSam9000 extends TestClient {
 								Tuple<Integer, Integer> dest = findEmptySpot(
 										MAIN_LENGTH, _ship.orientation,
 										sr.ships);
+
+								ShipAction.Action ori;
+
+								if (hr.xCoord % 2 == 0) {
+									ori = ShipAction.Action.MoveH;
+								} else {
+									ori = ShipAction.Action.MoveV;
+								}
 								tempAction = new ShipAction(_ship.ID, dest.x,
-										dest.y, ShipAction.Action.MoveH, 0);
+										dest.y, ori, 0);
 							}
 							if (tempAction != null) {
 								actions.add(tempAction.toJSONObject());

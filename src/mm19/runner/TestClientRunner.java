@@ -9,7 +9,7 @@ import mm19.testclient.sam9000.TestClientSam9000;
 public class TestClientRunner {
 
     public static void main(String args[]) {
-        String name = "SAM 10000%!!";
+        String name = "SAM DESTROYER 2.0";
         if(args.length >= 1) {
             name = args[0];
         }
