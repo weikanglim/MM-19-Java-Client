@@ -1,5 +1,7 @@
 package mm19.objects;
 
+import mm19.testclient.sam9000.TestClientSam9000;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -53,6 +55,48 @@ public class Ship {
 
 	public ShipAction fire(int x, int y) {
 		return new ShipAction(this.ID, x, y, ShipAction.Action.Fire, 0);
+	}
+
+	public boolean contains(int x, int y) {
+		int size = 0;
+		boolean result = false;
+
+		switch (this.type) {
+		case Main:
+			size = TestClientSam9000.MAIN_LENGTH;
+			break;
+		case Pilot:
+			size = TestClientSam9000.PILOT_LENGTH;
+			break;
+		case Destroyer:
+			size = TestClientSam9000.DESTROYER_LENGTH;
+			break;
+		default:
+			break;
+		}
+		System.out.println("Size: " + size + "\tType: " + this.type
+				+ "\tOrientation: " + this.orientation);
+		int head_x = this.xCoord, head_y = this.yCoord;
+		System.out.println("Head X: " + head_x + "\tHead Y: " + head_y
+				+ "\tx: " + x + "\ty: " + y);
+		if (this.orientation.equalsIgnoreCase("H")) {
+			if (x >= head_x) {
+				if (x <= head_x + size) {
+					if (y == head_y) {
+						result = true;
+					}
+				}
+			}
+		} else {
+			if (x == head_x) {
+				if (y >= head_y) {
+					if (y <= head_y + size) {
+						result = true;
+					}
+				}
+			}
+		}
+		return result;
 	}
 
 	@Override

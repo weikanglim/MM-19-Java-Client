@@ -19,15 +19,11 @@ import org.json.JSONObject;
 import sun.security.x509.AVA;
 
 /**
- * Contains logic for Alex's test client, feel free to disregard any logic you
- * don't agree with. I'll see you on the battle field. >:)
- * 
- * @author Flewp
  * 
  */
 public class TestClientSam9000 extends TestClient {
 
-	public int DESTROYERS = 8;
+	public int DESTROYERS = 9;
 	public int PILOTS = 18 - DESTROYERS;
 
 	public int COLUMNS = 4;
@@ -35,17 +31,17 @@ public class TestClientSam9000 extends TestClient {
 	public int COLUMN_WIDTH = TestClient.BOARD_WIDTH / COLUMNS;
 	public int ROW_HEIGHT = TestClient.BOARD_WIDTH / ROWS;
 
-	public int DESTROYER_LENGTH = 4;
-	public int PILOT_LENGTH = 2;
-	public int MAIN_LENGTH = 5;
+	public static final int DESTROYER_LENGTH = 4;
+	public static final int PILOT_LENGTH = 2;
+	public static final int MAIN_LENGTH = 5;
 
-	public int FIRE = 50;
-	public int MOVE_PILOT = 100;
-	public int MOVE_DEST = 250;
-	public int MOVE_MAIN = 300;
-	public int MINIMUN_RES = MOVE_MAIN;
-	public int PING = 110;
-	public int BURST = 250;
+	public static final int FIRE = 50;
+	public static final int MOVE_PILOT = 100;
+	public static final int MOVE_DEST = 250;
+	public static final int MOVE_MAIN = 300;
+	public static final int MINIMUN_RES = MOVE_MAIN;
+	public static final int PING = 110;
+	public static final int BURST = 250;
 
 	int resources;
 	int pingX;
@@ -193,12 +189,63 @@ public class TestClientSam9000 extends TestClient {
 		JSONObject turnObj = new JSONObject();
 		try {
 			Collection<JSONObject> actions = new ArrayList<JSONObject>();
-			boolean pinged = false;
-
 			ShipAction tempAction = null;
+			boolean moved = false;
+			// Chech hit for MAIN
+			for (HitReport hr : sr.hitReport) {
+				if (hr.hit) {
+					for (Ship _ship : sr.ships) {
+
+						if (_ship.type == ShipType.Main
+								&& _ship.contains(hr.xCoord, hr.yCoord)) {
+							System.out.println("X:" + hr.xCoord + "\tY:"
+									+ hr.yCoord);
+							Tuple<Integer, Integer> dest = findEmptySpot(
+									MAIN_LENGTH, _ship.orientation, sr.ships);
+							tempAction = new ShipAction(_ship.ID, dest.x,
+									dest.y, ShipAction.Action.MoveH, 0);
+							System.out.println("TO= X:" + dest.x + "\tY:"
+									+ dest.y);
+						}
+						if (tempAction != null) {
+							moved = true;
+							actions.add(tempAction.toJSONObject());
+							break;
+						}
+					}
+					if (moved) {
+						break;
+					}
+				}
+			}
+
+			// Chech hit for Ships
+			if (!moved) {
+				for (HitReport hr : sr.hitReport) {
+					if (hr.hit) {
+						for (Ship _ship : sr.ships) {
+							if (_ship.contains(hr.xCoord, hr.yCoord)) {
+								Tuple<Integer, Integer> dest = findEmptySpot(
+										MAIN_LENGTH, _ship.orientation,
+										sr.ships);
+								tempAction = new ShipAction(_ship.ID, dest.x,
+										dest.y, ShipAction.Action.MoveH, 0);
+							}
+							if (tempAction != null) {
+								actions.add(tempAction.toJSONObject());
+								break;
+							}
+						}
+						if (moved) {
+							break;
+						}
+					}
+				}
+			}
+
 			Ship ship;
 			for (Tuple<Integer, Integer> hit : hitList) {
-				ship = getNextShip(availableShips);
+				ship = getNextDestroyer(availableShips);
 				if (ship != null) {
 					tempAction = ship.fire(hit.x, hit.y);
 					actions.add(tempAction.toJSONObject());
@@ -209,6 +256,7 @@ public class TestClientSam9000 extends TestClient {
 			}
 
 			for (Ship free_ship : availableShips) {
+				tempAction = null;
 				int xCoord = (int) (Math.random() * 99);
 				int yCoord = (int) (Math.random() * 99);
 
@@ -221,21 +269,19 @@ public class TestClientSam9000 extends TestClient {
 					actions.add(tempAction.toJSONObject());
 				}
 			}
-			
-			for (Ship hit_ship : sr.ships) {
-				int xCoord = (int) (Math.random() * 99);
-				int yCoord = (int) (Math.random() * 99);
 
-				if (hit_ship.type == ShipType.Destroyer) {
-					tempAction = new ShipAction(hit_ship.ID, xCoord, yCoord,
-							ShipAction.Action.Fire, 0);
-				}
+			/*
+			 * for (Ship hit_ship : sr.ships) { int xCoord = (int)
+			 * (Math.random() * 99); int yCoord = (int) (Math.random() * 99);
+			 * 
+			 * if (hit_ship.type == ShipType.Destroyer) { tempAction = new
+			 * ShipAction(hit_ship.ID, xCoord, yCoord, ShipAction.Action.Fire,
+			 * 0); }
+			 * 
+			 * if (tempAction != null) { actions.add(tempAction.toJSONObject());
+			 * } }
+			 */
 
-				if (tempAction != null) {
-					actions.add(tempAction.toJSONObject());
-				}
-			}
-			
 			turnObj.put("playerToken", playerToken);
 			turnObj.put("shipActions", actions);
 			return turnObj;
@@ -257,7 +303,7 @@ public class TestClientSam9000 extends TestClient {
 	private void shoot(ArrayList<Ship> ships, int x, int y) {
 		Ship ship;
 		for (int i = 0; i < 2; i++) {
-			ship = getNextShip(ships);
+			ship = getNextDestroyer(ships);
 			if (ship != null) {
 				ship = ships.get(0);
 				ship.fire(x, y);
@@ -266,13 +312,61 @@ public class TestClientSam9000 extends TestClient {
 		}
 	}
 
-	private Ship getNextShip(ArrayList<Ship> ships) {
+	private Ship getNextDestroyer(ArrayList<Ship> ships) {
 		Ship ship = null;
-		if (ships.size() > 0) {
-			ship = ships.get(0);
-			ships.remove(0);
+		for (int i = 0; i < ships.size(); i++) {
+			if (ships.get(i).type == ShipType.Destroyer) {
+				ship = ships.get(i);
+				ships.remove(i);
+			}
 		}
 		return ship;
+	}
+
+	private Tuple<Integer, Integer> findEmptySpot(int length, String ori,
+			Ship[] ships) {
+		Random rand = new Random();
+		Tuple<Integer, Integer> dest = null;
+		int x, y;
+		boolean shipFound;
+		do {
+			shipFound = false;
+			x = rand.nextInt(99 - MAIN_LENGTH);
+			y = rand.nextInt(99 - MAIN_LENGTH);
+
+			if (ori == "H") {
+				for (int i = 0; i < length; i++) {
+					boolean conflict = false;
+					for (Ship ship : ships) {
+						if (ship.contains(x + i, y)) {
+							conflict = true;
+							break;
+						}
+					}
+					if (conflict) {
+						shipFound = true;
+						break;
+					}
+				}
+			} else {
+				for (int i = 0; i < length; i++) {
+					boolean conflict = false;
+					for (Ship ship : ships) {
+						if (ship.contains(x, y + i)) {
+							conflict = true;
+							break;
+						}
+					}
+					if (conflict) {
+						shipFound = true;
+						break;
+					}
+				}
+			}
+			dest = new Tuple<Integer, Integer>(x, y);
+		} while (shipFound);
+		return dest;
+		// return new Tuple<Integer, Integer> (0,0);
 	}
 
 	public class Tuple<X, Y> {
