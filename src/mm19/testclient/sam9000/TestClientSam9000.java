@@ -45,6 +45,9 @@ public class TestClientSam9000 extends TestClient {
 
 	int i_iter = 1;
 	int j_iter = 0;
+	
+	int backward_i_iter = 1;
+	int backward_j_iter = 0;
 
 	int oldResources;
 	int newResources;
@@ -58,6 +61,8 @@ public class TestClientSam9000 extends TestClient {
 
 	private ArrayList<Tuple<Integer, Integer>> hitList = new ArrayList<TestClientSam9000.Tuple<Integer, Integer>>();
 	private ArrayList<Ship> moveList = new ArrayList<Ship>();
+
+	private PingReport[] pingReport = new PingReport[0];
 
 	public TestClientSam9000(String name) {
 		super(name);
@@ -187,17 +192,9 @@ public class TestClientSam9000 extends TestClient {
 			}
 		}
 
-		// Ping report detection
-		System.out.println("Pings received = " + sr.pingReport.length);
-		for (PingReport pr : sr.pingReport) {
-			for (Ship ship : sr.ships) {
-				System.out.println("Is " + ship.ID + " == " + pr.shipID);
-				if (ship.ID == pr.shipID) {
-					moveList.add(ship);
-					System.out.println("Adding ship to movelist!");
-				}
-			}
-		}
+		System.out.println("PING REPORT SIZE = " + sr.pingReport.length);
+		this.pingReport = sr.pingReport;
+
 	}
 
 	/**
@@ -210,6 +207,19 @@ public class TestClientSam9000 extends TestClient {
 		Random rand = new Random();
 		ArrayList<Ship> availableShips = new ArrayList<Ship>(
 				Arrays.asList(sr.ships));
+
+		// Ping report detection
+		System.out.println("PING LIST SIZE = " + this.pingReport.length);
+		for (PingReport pr : sr.pingReport) {
+			System.out.println("SHIP LIST SIZE = " + sr.ships.length);
+			for (Ship ship : sr.ships) {
+				System.out.println(ship.ID + " == " + pr.shipID);
+				if (ship.ID == pr.shipID) {
+					System.out.println("Ship added to move list");
+					moveList.add(ship);
+				}
+			}
+		}
 
 		JSONObject turnObj = new JSONObject();
 		try {
@@ -324,9 +334,22 @@ public class TestClientSam9000 extends TestClient {
 
 			// Burst shotting
 			if (!(availableShips.size() == 0) && !specialUsed
-					&& oldResources > 10000) {
-				int x_burst = TestClient.BOARD_WIDTH - i_iter;
-				int y_burst = TestClient.BOARD_WIDTH - j_iter;
+					&& oldResources > 9000) {
+				int x_burst = backward_i_iter - 1;
+				int y_burst = backward_j_iter - 1;
+				
+				backward_i_iter -= 4;
+
+				if (backward_i_iter < 0) {
+					backward_j_iter -= 4;
+					backward_i_iter = TestClient.BOARD_WIDTH;
+					
+					if (backward_j_iter < 0) {
+						backward_i_iter = TestClient.BOARD_WIDTH;
+						backward_j_iter = TestClient.BOARD_WIDTH;
+					}
+				}
+				
 				ship = getNextDestroyer(availableShips);
 				tempAction = new ShipAction(ship.ID, x_burst, y_burst,
 						ShipAction.Action.BurstShot, 0);
@@ -334,15 +357,14 @@ public class TestClientSam9000 extends TestClient {
 				specialUsed = true;
 			}
 
-			// Shooting
 			boolean Shot = false;
 			do {
 				int xCoord = i_iter;
 				int yCoord = j_iter;
 				Shot = shoot(availableShips, xCoord, yCoord, actions); // Removes
-																		// available
-																		// attacking
-																		// ships
+				// available
+				// attacking
+				// ships
 
 				if (Shot) {
 					// Horizontal iteration
@@ -360,25 +382,37 @@ public class TestClientSam9000 extends TestClient {
 
 			} while (Shot);
 
-			// Sonar function
-			if (!specialUsed && oldResources > 10000) { // Resources?
-				int xCoord = rand.nextInt(100);
-				int yCoord = rand.nextInt(100);
-				for (Ship free_ship : availableShips) {
-					if (free_ship.type == ShipType.Pilot) {
-						tempAction = new ShipAction(free_ship.ID, xCoord,
-								yCoord, ShipAction.Action.Sonar, 0);
-						pingX = xCoord;
-						pingY = yCoord;
-
-						if (tempAction != null) {
-							actions.add(tempAction.toJSONObject());
-							specialUsed = true;
-							break;
-						}
-					}
-				}
-			}
+			// // Sonar function
+			// if (!specialUsed && oldResources > 10000) { // Resources?
+			// int xCoord = i_iter;
+			// int yCoord = j_iter;
+			//
+			// i_iter += 2;
+			//
+			// if (i_iter > TestClient.BOARD_WIDTH) {
+			// j_iter++;
+			// i_iter = (j_iter + 1) % 2;
+			// if (j_iter > TestClient.BOARD_WIDTH) {
+			// i_iter = 1;
+			// j_iter = 0;
+			// }
+			// }
+			//
+			// for (Ship free_ship : availableShips) {
+			// if (free_ship.type == ShipType.Pilot) {
+			// tempAction = new ShipAction(free_ship.ID, xCoord,
+			// yCoord, ShipAction.Action.Sonar, 0);
+			// pingX = xCoord;
+			// pingY = yCoord;
+			//
+			// if (tempAction != null) {
+			// actions.add(tempAction.toJSONObject());
+			// specialUsed = true;
+			// break;
+			// }
+			// }
+			// }
+			// }
 
 			turnObj.put("playerToken", playerToken);
 			turnObj.put("shipActions", actions);

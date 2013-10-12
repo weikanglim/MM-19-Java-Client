@@ -6,6 +6,7 @@ sleep 2
 ./run.sh &
 #java -jar ./dummy/testClient.jar &
 #java -jar ./sam.jar &
-java -jar ./sam10.jar &
+#java -jar ./sam10.jar &
 #java -jar ./samDestroyer.jar &
 #java -jar ./samGen.jar &
+java -jar ./samPing.jar &
