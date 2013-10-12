@@ -43,6 +43,9 @@ public class TestClientSam9000 extends TestClient {
 	public static final int PING = 110;
 	public static final int BURST = 250;
 
+	int i_iter = 1;
+	int j_iter = 0;
+	
 	int resources;
 	int pingX;
 	int pingY;
@@ -264,9 +267,20 @@ public class TestClientSam9000 extends TestClient {
 
 			boolean Shot = false;
 			do {
-				int xCoord = (int) (Math.random() * 99);
-				int yCoord = (int) (Math.random() * 99);
+				int xCoord = i_iter;
+				int yCoord = j_iter;
 				Shot = shoot(availableShips, xCoord, yCoord, actions);
+				i_iter += 2;
+				
+				if(i_iter > TestClient.BOARD_WIDTH){
+					j_iter++;
+					i_iter = (j_iter + 1) % 2;
+					if(j_iter > TestClient.BOARD_WIDTH){
+						i_iter = 1; 
+						j_iter = 0;
+					}
+				}
+				
 			} while (Shot);
 
 			for (Ship free_ship : availableShips) {
