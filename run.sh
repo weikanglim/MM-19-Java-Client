@@ -53,6 +53,6 @@ list=(
 
 i=$(( $RANDOM % 48 ))
 
-#java -cp "bin/" mm19.runner.TestClientRunner  "${list[$i]}"
-java -jar sam.jar  "${list[$i]}"
+java -cp "bin/" mm19.runner.TestClientRunner  "${list[$i]}"
+#java -jar sam.jar  "${list[$i]}"
 
