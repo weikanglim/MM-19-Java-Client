@@ -45,10 +45,16 @@ def runGame(match_name, name1, name2, run_script1, run_script2):
         bot2.terminate()
     if ((bot1.poll() is None) or (bot2.poll() is None)):  # makes sure they die
         time.sleep(5)
+
         if not bot1.poll():
-            bot1.kill()
+            try:
+                bot1.kill()
+            except OSError: pass
         if not bot2.poll():
-            bot2.kill()
+            try:
+                bot2.kill()
+            except OSError: pass
+                
     with open(match_name) as f:
         winner = f.readlines()[-1].rstrip()
     # the winner is in last line of the output file
