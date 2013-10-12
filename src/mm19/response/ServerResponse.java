@@ -61,6 +61,7 @@ public class ServerResponse {
 
             // Getting responseCode
             responseCode = obj.getInt("responseCode");
+            resources = obj.getInt("resources");
 
             // Getting error
             JSONArray err = obj.getJSONArray("error");

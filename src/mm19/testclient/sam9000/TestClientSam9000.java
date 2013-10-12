@@ -45,15 +45,21 @@ public class TestClientSam9000 extends TestClient {
 
 	int i_iter = 1;
 	int j_iter = 0;
-	
+
+	int oldResources;
+	int newResources;
+	int netIncome;
 	int resources;
 	int pingX;
 	int pingY;
+	int turns;
 	boolean pingHit;
 	String playerToken;
 
 	private ArrayList<Tuple<Integer, Integer>> hitList = new ArrayList<TestClientSam9000.Tuple<Integer, Integer>>();
+	private ArrayList<Ship> moveList = new ArrayList<Ship>();
 
+	
 	public TestClientSam9000(String name) {
 		super(name);
 	}
@@ -67,6 +73,7 @@ public class TestClientSam9000 extends TestClient {
 		Random rand = new Random();
 		try {
 			obj.put("playerName", this.name);
+			oldResources = 0;
 
 			boolean main = false;
 			int destroyer = DESTROYERS, pilots = PILOTS;
@@ -138,7 +145,7 @@ public class TestClientSam9000 extends TestClient {
 					if (xCoord > (COLUMN_WIDTH - MAIN_LENGTH)) {
 						xCoord -= MAIN_LENGTH;
 					}
-					if (yCoord > (ROW_HEIGHT - MAIN_LENGTH)) {
+		if (yCoord > (ROW_HEIGHT - MAIN_LENGTH)) {
 						yCoord -= MAIN_LENGTH;
 					}
 					ship.put("xCoord", xCoord);
@@ -171,13 +178,25 @@ public class TestClientSam9000 extends TestClient {
 	 */
 	@Override
 	public void processResponse(ServerResponse sr) {
-
 		hitList.clear();
-		/*for (HitReport hr : sr.hitReport) {
-			if (hr.hit) {
-				hitList.add(new Tuple<Integer, Integer>(hr.xCoord, hr.yCoord));
+		moveList.clear();
+		
+		// Hit report detection
+		for (HitReport hr : sr.hitReport) { 
+			if (hr.hit) { 
+				hitList.add(new Tuple<Integer, Integer>(hr.xCoord, hr.yCoord)); 
+			} 
+		}
+		
+		// Ping report detection
+		for (PingReport pr : sr.pingReport){
+			for(Ship ship : sr.ships){
+				if(ship.ID == pr.shipID){
+					moveList.add(ship);
+					System.out.println("Adding ship to movelist!");
+				}
 			}
-		}*/
+		}
 	}
 
 	/**
@@ -185,7 +204,9 @@ public class TestClientSam9000 extends TestClient {
 	 */
 	@Override
 	public JSONObject prepareTurn(ServerResponse sr) {
-
+		turns++;
+		
+		Random rand = new Random();
 		ArrayList<Ship> availableShips = new ArrayList<Ship>(
 				Arrays.asList(sr.ships));
 
@@ -193,59 +214,109 @@ public class TestClientSam9000 extends TestClient {
 		try {
 			Collection<JSONObject> actions = new ArrayList<JSONObject>();
 			ShipAction tempAction = null;
-			boolean moved = false;
-			// Check hit for MAIN
+			boolean specialUsed = false;
+			
+			// Check hit for MAIN and move
 			for (HitReport hr : sr.hitReport) {
 				if (hr.hit) {
 					for (Ship _ship : sr.ships) {
-
-						if (_ship.type == ShipType.Main
+						oldResources = sr.resources;
+	if (_ship.type == ShipType.Main
 								&& _ship.contains(hr.xCoord, hr.yCoord)) {
 							System.out.println("X:" + hr.xCoord + "\tY:"
 									+ hr.yCoord);
-							Tuple<Integer, Integer> dest = findEmptySpot(
-									MAIN_LENGTH, _ship.orientation, sr.ships);
-							tempAction = new ShipAction(_ship.ID, dest.x,
-									dest.y, ShipAction.Action.MoveH, 0);
-							System.out.println("TO= X:" + dest.x + "\tY:"
-									+ dest.y);
+							if (rand.nextInt(2) == 1) {
+								Tuple<Integer, Integer> dest = findEmptySpot(
+										MAIN_LENGTH, "H", sr.ships);
+								tempAction = new ShipAction(_ship.ID, dest.x,
+										dest.y, ShipAction.Action.MoveH, 0);
+							} else {
+								Tuple<Integer, Integer> dest = findEmptySpot(
+										MAIN_LENGTH, "V", sr.ships);
+								tempAction = new ShipAction(_ship.ID, dest.x,
+										dest.y, ShipAction.Action.MoveV, 0);
+							}
 						}
 						if (tempAction != null) {
-							moved = true;
+							specialUsed = true;
 							actions.add(tempAction.toJSONObject());
 							break;
 						}
 					}
-					if (moved) {
+					if (specialUsed) {
 						break;
 					}
 				}
 			}
 
-			// Chech hit for Ships
-			if (!moved) {
+			// Check hit for Ships and move
+			if (!specialUsed) {
 				for (HitReport hr : sr.hitReport) {
 					if (hr.hit) {
 						for (Ship _ship : sr.ships) {
 							if (_ship.contains(hr.xCoord, hr.yCoord)) {
-								Tuple<Integer, Integer> dest = findEmptySpot(
-										MAIN_LENGTH, _ship.orientation,
-										sr.ships);
-								tempAction = new ShipAction(_ship.ID, dest.x,
-										dest.y, ShipAction.Action.MoveH, 0);
+								if (rand.nextInt(2) == 1) {
+									Tuple<Integer, Integer> dest = findEmptySpot(
+											MAIN_LENGTH, "H",
+											sr.ships);
+									tempAction = new ShipAction(_ship.ID,
+											dest.x, dest.y,
+											ShipAction.Action.MoveH, 0);
+								}
+								else{
+									Tuple<Integer, Integer> dest = findEmptySpot(
+											MAIN_LENGTH, "V",
+											sr.ships);
+									tempAction = new ShipAction(_ship.ID,
+											dest.x, dest.y,
+											ShipAction.Action.MoveV, 0);
+								}
 							}
 							if (tempAction != null) {
+								specialUsed = true;
 								actions.add(tempAction.toJSONObject());
 								break;
 							}
 						}
-						if (moved) {
+						if (specialUsed) {
 							break;
 						}
 					}
 				}
 			}
+			
+			// Move ping'd units
+			if (!specialUsed) {
+				for (Ship _ship : moveList) {
+					System.out.println("In movelist!");
+					if (rand.nextInt(2) == 1) {
+						System.out.println("Moving V!");
+						Tuple<Integer, Integer> dest = findEmptySpot(
+								MAIN_LENGTH, "H",
+								sr.ships);
+						tempAction = new ShipAction(_ship.ID,
+								dest.x, dest.y,
+								ShipAction.Action.MoveH, 0);
+					}
+					else{
+						System.out.println("Moving H!");
+						Tuple<Integer, Integer> dest = findEmptySpot(
+								MAIN_LENGTH, "V",
+								sr.ships);
+						tempAction = new ShipAction(_ship.ID,
+								dest.x, dest.y,
+								ShipAction.Action.MoveV, 0);
+					}
+					if (tempAction != null) {
+						actions.add(tempAction.toJSONObject());
+						specialUsed = true;
+						System.out.println("Special used on evading ping!");
+						break;
+					}
+				}
+			}
 
+			// Rehitting enemy ships
 			Ship ship;
 			for (Tuple<Integer, Integer> hit : hitList) {
 				ship = getNextDestroyer(availableShips);
@@ -258,53 +329,70 @@ public class TestClientSam9000 extends TestClient {
 				}
 			}
 
+			// Burst shotting
+			if(! (availableShips.size() == 0) && !specialUsed && oldResources > 10000){
+				int x_burst = TestClient.BOARD_WIDTH - i_iter;
+				int y_burst = TestClient.BOARD_WIDTH - j_iter;
+				ship = getNextDestroyer(availableShips);
+                tempAction = new ShipAction(ship.ID, x_burst, y_burst, ShipAction.Action.BurstShot, 0);
+				actions.add(tempAction.toJSONObject());
+				specialUsed = true;
+			}
+			
+			// Shooting
 			boolean Shot = false;
 			do {
 				int xCoord = i_iter;
 				int yCoord = j_iter;
-				Shot = shoot(availableShips, xCoord, yCoord, actions);
-				i_iter += 2;
+				Shot = shoot(availableShips, xCoord, yCoord, actions); // Removes available attacking ships
 				
-				if(i_iter > TestClient.BOARD_WIDTH){
-					j_iter++;
-					i_iter = (j_iter + 1) % 2;
-					if(j_iter > TestClient.BOARD_WIDTH){
-						i_iter = 1; 
-						j_iter = 0;
+				if(Shot){
+					// Horizontal iteration
+					i_iter += 2;
+	
+					if (i_iter > TestClient.BOARD_WIDTH) {
+						j_iter++;
+						i_iter = (j_iter + 1) % 2;
+						if (j_iter > TestClient.BOARD_WIDTH) {
+							i_iter = 1;
+							j_iter = 0;
+						}
 					}
 				}
-				
+
 			} while (Shot);
 
-			for (Ship free_ship : availableShips) {
-				tempAction = null;
-				int xCoord = (int) (Math.random() * 99);
-				int yCoord = (int) (Math.random() * 99);
-
-				if (free_ship.type == ShipType.Destroyer) {
-					// tempAction = new ShipAction(free_ship.ID, xCoord,
-					// yCoord,ShipAction.Action.Fire, 0);
-				}
-
-				if (tempAction != null) {
-					actions.add(tempAction.toJSONObject());
+			// Sonar function
+			if(!specialUsed && oldResources > 10000){ // Resources?
+				int xCoord = rand.nextInt(100);
+				int yCoord = rand.nextInt(100);
+				for (Ship free_ship : availableShips) {
+					if (free_ship.type == ShipType.Pilot) {
+						tempAction = new ShipAction(free_ship.ID, xCoord, yCoord, ShipAction.Action.Sonar, 0);
+						pingX = xCoord;
+						pingY = yCoord;
+						
+						if(tempAction != null){
+							actions.add(tempAction.toJSONObject());
+							specialUsed = true;
+							break;
+						}
+					}
 				}
 			}
-
-			/*
-			 * for (Ship hit_ship : sr.ships) { int xCoord = (int)
-			 * (Math.random() * 99); int yCoord = (int) (Math.random() * 99);
-			 * 
-			 * if (hit_ship.type == ShipType.Destroyer) { tempAction = new
-			 * ShipAction(hit_ship.ID, xCoord, yCoord, ShipAction.Action.Fire,
-			 * 0); }
-			 * 
-			 * if (tempAction != null) { actions.add(tempAction.toJSONObject());
-			 * } }
-			 */
-
+			
 			turnObj.put("playerToken", playerToken);
 			turnObj.put("shipActions", actions);
+						
+			if(turns % 2 == 1){
+				newResources = sr.resources;
+				netIncome = newResources - oldResources;
+			}
+			else{
+				oldResources = sr.resources;
+			}
+			System.err.println("Resources is " + newResources);
+			System.err.println("Net Income is " + netIncome);
 			return turnObj;
 		} catch (JSONException e) {
 			e.printStackTrace();
@@ -321,6 +409,14 @@ public class TestClientSam9000 extends TestClient {
 		System.out.println("wat");
 	}
 
+	/**
+	 * Finds an attacking ship and remove sit from AvailableShips.
+	 * @param ships
+	 * @param x
+	 * @param y
+	 * @param actions
+	 * @return
+	 */
 	private boolean shoot(ArrayList<Ship> ships, int x, int y,
 			Collection<JSONObject> actions) {
 		Ship ship;
@@ -358,7 +454,8 @@ public class TestClientSam9000 extends TestClient {
 		Random rand = new Random();
 		Tuple<Integer, Integer> dest = null;
 		int x, y;
-		boolean shipFound;
+		boolean shipFound;		// return new Tuple<Integer, Integer> (0,0);
+
 		do {
 			shipFound = false;
 			x = rand.nextInt(99 - MAIN_LENGTH);
@@ -368,7 +465,8 @@ public class TestClientSam9000 extends TestClient {
 				for (int i = 0; i < length; i++) {
 					boolean conflict = false;
 					for (Ship ship : ships) {
-						if (ship.contains(x + i, y)) {
+						if (ship.contains(x + i, y)
+								|| x + length > TestClient.BOARD_WIDTH) {
 							conflict = true;
 							break;
 						}
@@ -382,7 +480,8 @@ public class TestClientSam9000 extends TestClient {
 				for (int i = 0; i < length; i++) {
 					boolean conflict = false;
 					for (Ship ship : ships) {
-						if (ship.contains(x, y + i)) {
+						if (ship.contains(x, y + i)
+								|| y + length > TestClient.BOARD_WIDTH) {
 							conflict = true;
 							break;
 						}
@@ -396,7 +495,6 @@ public class TestClientSam9000 extends TestClient {
 			dest = new Tuple<Integer, Integer>(x, y);
 		} while (shipFound);
 		return dest;
-		// return new Tuple<Integer, Integer> (0,0);
 	}
 
 	public class Tuple<X, Y> {
