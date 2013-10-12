@@ -179,12 +179,6 @@ public class TestClientSam9000 extends TestClient {
 	@Override
 	public void processResponse(ServerResponse sr) {
 		hitList.clear();
-<<<<<<< HEAD
-		/*
-		 * for (HitReport hr : sr.hitReport) { if (hr.hit) { hitList.add(new
-		 * Tuple<Integer, Integer>(hr.xCoord, hr.yCoord)); } }
-		 */
-=======
 		moveList.clear();
 		
 		// Hit report detection
@@ -203,7 +197,6 @@ public class TestClientSam9000 extends TestClient {
 				}
 			}
 		}
->>>>>>> 96a56638fb727bbfbd247331400e5c932f332812
 	}
 
 	/**
@@ -262,21 +255,6 @@ public class TestClientSam9000 extends TestClient {
 					if (hr.hit) {
 						for (Ship _ship : sr.ships) {
 							if (_ship.contains(hr.xCoord, hr.yCoord)) {
-<<<<<<< HEAD
-								Tuple<Integer, Integer> dest = findEmptySpot(
-										MAIN_LENGTH, _ship.orientation,
-										sr.ships);
-
-								ShipAction.Action ori;
-
-								if (hr.xCoord % 2 == 0) {
-									ori = ShipAction.Action.MoveH;
-								} else {
-									ori = ShipAction.Action.MoveV;
-								}
-								tempAction = new ShipAction(_ship.ID, dest.x,
-										dest.y, ori, 0);
-=======
 								if (rand.nextInt(2) == 1) {
 									Tuple<Integer, Integer> dest = findEmptySpot(
 											MAIN_LENGTH, "H",
@@ -293,7 +271,6 @@ public class TestClientSam9000 extends TestClient {
 											dest.x, dest.y,
 											ShipAction.Action.MoveV, 0);
 								}
->>>>>>> 96a56638fb727bbfbd247331400e5c932f332812
 							}
 							if (tempAction != null) {
 								specialUsed = true;
