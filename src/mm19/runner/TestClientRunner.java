@@ -9,7 +9,7 @@ import mm19.testclient.sam9000.TestClientSam9000;
 public class TestClientRunner {
 
     public static void main(String args[]) {
-        String name = "Sam The Genius!!";
+        String name = "Sam The Trickster";
         if(args.length >= 1) {
             name = args[0];
         }
