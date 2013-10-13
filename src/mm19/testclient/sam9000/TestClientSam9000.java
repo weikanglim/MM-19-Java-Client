@@ -264,7 +264,7 @@ public class TestClientSam9000 extends TestClient {
 					for (Ship _ship : sr.ships) {
 						oldResources = sr.resources;
 						if (_ship.type == ShipType.Main
-								&& _ship.contains(hr.xCoord, hr.yCoord)) {	
+								&& _ship.contains(hr.xCoord, hr.yCoord)) {
 							System.out.println("X:" + hr.xCoord + "\tY:"
 									+ hr.yCoord);
 							if (rand.nextInt(2) == 1) {
@@ -405,17 +405,25 @@ public class TestClientSam9000 extends TestClient {
 			}
 
 			boolean Shot = false;
+			ArrayList<ShipAction> allShotActions = new ArrayList<ShipAction>();
 			do {
 				int xCoord = i_iter;
 				int yCoord = j_iter;
-				Shot = shoot(availableShips, xCoord, yCoord, actions, sr); // Removes
+				ArrayList<ShipAction> shotActions = shoot(availableShips,
+						xCoord, yCoord, sr); // Removes
 				// available
 				// attacking
 				// ships
-
+				if (shotActions.size() > 0) {
+					Shot = true;
+					allShotActions.addAll(shotActions);
+				} else {
+					Shot = false;
+				}
 				if (Shot) {
 					// Horizontal iteration
-					System.out.println("i_iter from " + i_iter + " by " + ij_incre);
+					System.out.println("i_iter from " + i_iter + " by "
+							+ ij_incre);
 					i_iter += ij_incre;
 
 					if (ij_direction == "down") {
@@ -440,6 +448,10 @@ public class TestClientSam9000 extends TestClient {
 				}
 
 			} while (Shot);
+
+			for (int i = allShotActions.size() - 1; i >= 0; i--) {
+				actions.add(allShotActions.get(i).toJSONObject());
+			}
 
 			// // Sonar function
 			// if (!specialUsed && oldResources > 10000) { // Resources?
@@ -509,9 +521,10 @@ public class TestClientSam9000 extends TestClient {
 	 * @param actions
 	 * @return
 	 */
-	private boolean shoot(ArrayList<Ship> ships, int x, int y,
-			Collection<JSONObject> actions, ServerResponse sr) {
+	private ArrayList<ShipAction> shoot(ArrayList<Ship> ships, int x, int y,
+			ServerResponse sr) {
 		Ship ship;
+		ArrayList<ShipAction> actions = new ArrayList<ShipAction>();
 		boolean fired = false;
 		for (int i = 0; i < 2; i++) {
 			ship = getNextDestroyer(ships);
@@ -519,13 +532,13 @@ public class TestClientSam9000 extends TestClient {
 				fired = true;
 				ShipAction action = ship.fire(x, y);
 				if (action != null) {
-					actions.add(action.toJSONObject());
+					actions.add(action);
 				}
 			} else {
 				break;
 			}
 		}
-		return fired;
+		return actions;
 	}
 
 	private Ship getNextDestroyer(ArrayList<Ship> ships) {
